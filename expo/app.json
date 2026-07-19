@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "SubTrack",
+    "slug": "subtrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F4F3F0"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rajashri.subtrack"
+    },
+    "android": {
+      "package": "com.rajashri.subtrack"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": []
+  }
+}

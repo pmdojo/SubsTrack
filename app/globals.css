@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #F4F3F0;
+  color: #1A1917;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(38px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(38px) rotate(-360deg); }
+}
+
+@keyframes orbitReverse {
+  from { transform: rotate(0deg) translateX(52px) rotate(0deg); }
+  to   { transform: rotate(-360deg) translateX(52px) rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(123,110,246,0.4); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(123,110,246,0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(123,110,246,0); }
+}
+
+@keyframes spin-once {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.orbit-cluster {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbit-cluster:hover .orbit-icon,
+.orbit-cluster:hover .orbit-icon-outer {
+  animation-play-state: paused;
+}
+
+.orbit-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+
+.orbit-icon {
+  position: absolute;
+  top: -14px;
+  left: -14px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.6);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  animation: orbit 8s linear infinite;
+  transform-origin: center center;
+  color: #fff;
+  cursor: pointer;
+}
+
+.orbit-icon:nth-child(1) { animation-delay: 0s; }
+.orbit-icon:nth-child(2) { animation-delay: -2s; }
+.orbit-icon:nth-child(3) { animation-delay: -4s; }
+.orbit-icon:nth-child(4) { animation-delay: -6s; }
+
+.orbit-icon-outer {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.4);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  animation: orbitReverse 12s linear infinite;
+  transform-origin: center center;
+  color: #fff;
+  cursor: pointer;
+}
+
+.orbit-icon-outer:nth-child(1) { animation-delay: 0s; }
+.orbit-icon-outer:nth-child(2) { animation-delay: -4s; }
+.orbit-icon-outer:nth-child(3) { animation-delay: -8s; }
+
+.pulse-ring {
+  animation: pulse-ring 2s infinite;
+}
+
+.spin-on-click {
+  animation: spin-once 0.6s ease-in-out;
+}
+
+/* Hide scrollbar on small card bar charts */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

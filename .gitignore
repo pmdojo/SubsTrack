@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+**/dist/
+**/build/
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+**/.expo/
+
+# Metro / RN
+.metro-health-check*
+
+# Env files (never commit)
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# TypeScript build artifacts
+tsconfig.tsbuildinfo
+**/tsconfig.tsbuildinfo
+next-env.d.ts
+
+# Vercel
+.vercel
+
+# Claude Code (local settings)
+.claude/settings.local.json
