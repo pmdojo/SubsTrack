@@ -2,7 +2,7 @@
 
 Premium subscription tracker built with Expo + React Native + Web.
 
-Live demo: _add your Vercel URL here after first deploy_
+**Live demo:** [subs-track-indol.vercel.app](https://subs-track-indol.vercel.app)
 
 ## What's here
 
