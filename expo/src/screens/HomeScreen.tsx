@@ -11,6 +11,7 @@ import { MotiView } from '../lib/motion'
 import Header from '../components/Header'
 import DuePaymentCard from '../components/DuePaymentCard'
 import ActiveSubsHeroCard from '../components/ActiveSubsHeroCard'
+import MetricsBar from '../components/MetricsBar'
 import SpendingOverview from '../components/SpendingOverview'
 import SubList from '../components/SubList'
 import AddSubModal from '../components/AddSubModal'
@@ -60,12 +61,25 @@ export default function HomeScreen() {
   }
 
   // Semantic status changes — every derived metric (Due Payment total, Active
-  // count, orbit icons, Expense %) already filters on status === 'active' via
-  // useMemo, so flipping one sub's status here causes those to recompute
-  // immediately on the next render. No extra plumbing needed for "real-time
-  // dashboard updates" — that falls out of the state model.
+  // count, orbit icons, Expenses %, MetricsBar tiles) already filters/derives
+  // from `subs` via useMemo. Flipping status here → all metrics re-render in
+  // the same frame. Timestamps power the Cancelled-this-Month / Saved-this-Year
+  // math and must be stamped locally alongside the async store write.
   const setStatus = (id: string, status: SubStatus) => {
-    setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)))
+    const nowIso = new Date().toISOString()
+    setSubs((prev) =>
+      prev.map((s) => {
+        if (s.id !== id) return s
+        const next = { ...s, status }
+        if (status === 'paused') next.pausedAt = nowIso
+        if (status === 'cancelled') next.cancelledAt = nowIso
+        if (status === 'active') {
+          next.pausedAt = undefined
+          next.cancelledAt = undefined
+        }
+        return next
+      })
+    )
   }
   const handlePause = (id: string) => {
     setStatus(id, 'paused')
@@ -133,10 +147,14 @@ export default function HomeScreen() {
         </Section>
 
         <Section delay={160}>
+          <MetricsBar subs={subs} />
+        </Section>
+
+        <Section delay={220}>
           <SpendingOverview subs={subs} />
         </Section>
 
-        <Section delay={240}>
+        <Section delay={280}>
           <SubList
             subs={subs}
             onDelete={handleDelete}

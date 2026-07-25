@@ -22,7 +22,7 @@ export const seedSubs: Subscription[] = [
     color: '#E50914',
     price: 649,
     cardLast4: '0977',
-    billingDate: '2025-12-23',
+    billingDate: '2026-08-10',
     status: 'active',
     plan: 'Premium',
     autoRenew: true,
@@ -35,7 +35,7 @@ export const seedSubs: Subscription[] = [
     color: '#10A37F',
     price: 1650,
     cardLast4: '0977',
-    billingDate: '2025-06-15',
+    billingDate: '2026-08-17',
     status: 'active',
     plan: 'Plus',
     autoRenew: true,
@@ -61,7 +61,7 @@ export const seedSubs: Subscription[] = [
     color: '#1DB954',
     price: 179,
     cardLast4: '1142',
-    billingDate: '2025-05-01',
+    billingDate: '2026-08-02',
     status: 'active',
     plan: 'Individual',
     autoRenew: true,
@@ -170,5 +170,44 @@ export const seedSubs: Subscription[] = [
     plan: 'Personal',
     autoRenew: true,
     category: 'Productivity',
+  },
+  // Two pre-cancelled subs so Cancelled-this-Month and Saved-this-Year
+  // start non-zero on first launch. Both cancelledAt sit inside the current
+  // year so they contribute to the annual-savings math.
+  {
+    id: 'sub-hbo',
+    name: 'HBO Max',
+    icon: 'H',
+    color: '#7C3AED',
+    price: 499,
+    cardLast4: '0977',
+    billingDate: '2026-01-10',
+    status: 'cancelled',
+    plan: 'Standard',
+    autoRenew: false,
+    category: 'Entertainment',
+    cancelledAt: new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      5
+    ).toISOString(),
+  },
+  {
+    id: 'sub-canva',
+    name: 'Canva Pro',
+    icon: 'C',
+    color: '#00C4CC',
+    price: 499,
+    cardLast4: '1142',
+    billingDate: '2026-02-14',
+    status: 'cancelled',
+    plan: 'Pro',
+    autoRenew: false,
+    category: 'Design',
+    cancelledAt: new Date(
+      new Date().getFullYear(),
+      Math.max(0, new Date().getMonth() - 2),
+      18
+    ).toISOString(),
   },
 ]

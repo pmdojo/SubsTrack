@@ -10,6 +10,8 @@ export type Subscription = {
   billingDate: string // YYYY-MM-DD
   status: SubStatus
   category: string
-  plan?: string // e.g. "Premium", "Family", "Basic" — optional for back-compat
+  plan?: string // e.g. "Premium", "Family", "Basic"
   autoRenew?: boolean // defaults to true when missing
+  cancelledAt?: string // ISO date, set when status flips to 'cancelled'
+  pausedAt?: string    // ISO date, set when status flips to 'paused'
 }

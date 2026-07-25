@@ -55,13 +55,24 @@ export async function updateSub(sub: Subscription): Promise<void> {
   }
 }
 
-// Semantic helpers that just flip the status field on one sub. Kept thin so
-// callers don't have to know the storage layout — swappable for a Supabase
-// PATCH later without touching components.
+// Semantic helpers that flip status + stamp the timestamp for metrics.
+// Kept thin so components stay free of storage-shape knowledge.
 async function setStatus(id: string, status: SubStatus): Promise<void> {
   try {
     const current = await getSubs()
-    const next = current.map((s) => (s.id === id ? { ...s, status } : s))
+    const nowIso = new Date().toISOString()
+    const next = current.map((s) => {
+      if (s.id !== id) return s
+      const patch: Partial<Subscription> = { status }
+      if (status === 'paused') patch.pausedAt = nowIso
+      if (status === 'cancelled') patch.cancelledAt = nowIso
+      // Clear the stamp when a sub reactivates so it doesn't linger in metrics
+      if (status === 'active') {
+        patch.pausedAt = undefined
+        patch.cancelledAt = undefined
+      }
+      return { ...s, ...patch }
+    })
     await saveSubs(next)
   } catch (err) {
     console.warn('[subtrack] setStatus failed', err)
