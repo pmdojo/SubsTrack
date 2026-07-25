@@ -11,6 +11,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-03-12',
     status: 'active',
+    plan: 'Pro',
+    autoRenew: true,
     category: 'AI',
   },
   {
@@ -22,6 +24,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-12-23',
     status: 'active',
+    plan: 'Premium',
+    autoRenew: true,
     category: 'Entertainment',
   },
   {
@@ -33,6 +37,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-06-15',
     status: 'active',
+    plan: 'Plus',
+    autoRenew: true,
     category: 'AI',
   },
   {
@@ -44,6 +50,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '1142',
     billingDate: '2025-05-18',
     status: 'active',
+    plan: 'Premium',
+    autoRenew: true,
     category: 'Entertainment',
   },
   {
@@ -55,6 +63,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '1142',
     billingDate: '2025-05-01',
     status: 'active',
+    plan: 'Individual',
+    autoRenew: true,
     category: 'Music',
   },
   {
@@ -66,6 +76,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-07-02',
     status: 'active',
+    plan: 'All Apps',
+    autoRenew: true,
     category: 'Design',
   },
   {
@@ -77,6 +89,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-08-14',
     status: 'active',
+    plan: 'Professional',
+    autoRenew: true,
     category: 'Design',
   },
   {
@@ -88,6 +102,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '1142',
     billingDate: '2025-05-30',
     status: 'active',
+    plan: 'Plus',
+    autoRenew: true,
     category: 'Productivity',
   },
   {
@@ -99,6 +115,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '1142',
     billingDate: '2025-06-04',
     status: 'active',
+    plan: 'Nitro',
+    autoRenew: true,
     category: 'Social',
   },
   {
@@ -110,6 +128,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-05-08',
     status: 'active',
+    plan: 'Individual',
+    autoRenew: true,
     category: 'Productivity',
   },
   {
@@ -121,6 +141,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-05-25',
     status: 'active',
+    plan: '200 GB',
+    autoRenew: true,
     category: 'Storage',
   },
   {
@@ -132,6 +154,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-06-11',
     status: 'active',
+    plan: 'Pro',
+    autoRenew: true,
     category: 'Dev',
   },
   {
@@ -143,6 +167,8 @@ export const seedSubs: Subscription[] = [
     cardLast4: '0977',
     billingDate: '2025-01-01',
     status: 'expired',
+    plan: 'Personal',
+    autoRenew: true,
     category: 'Productivity',
   },
 ]

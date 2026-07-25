@@ -1,3 +1,5 @@
+export type SubStatus = 'active' | 'paused' | 'cancelled' | 'expired'
+
 export type Subscription = {
   id: string
   name: string
@@ -6,6 +8,8 @@ export type Subscription = {
   price: number // monthly INR
   cardLast4: string
   billingDate: string // YYYY-MM-DD
-  status: 'active' | 'expired'
+  status: SubStatus
   category: string
+  plan?: string // e.g. "Premium", "Family", "Basic" — optional for back-compat
+  autoRenew?: boolean // defaults to true when missing
 }

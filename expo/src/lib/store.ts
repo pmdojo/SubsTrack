@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { Subscription } from './types'
+import type { Subscription, SubStatus } from './types'
 import { seedSubs } from './data'
 
 const STORAGE_KEY = 'subtrack_subs'
@@ -54,6 +54,23 @@ export async function updateSub(sub: Subscription): Promise<void> {
     console.warn('[subtrack] updateSub failed', err)
   }
 }
+
+// Semantic helpers that just flip the status field on one sub. Kept thin so
+// callers don't have to know the storage layout — swappable for a Supabase
+// PATCH later without touching components.
+async function setStatus(id: string, status: SubStatus): Promise<void> {
+  try {
+    const current = await getSubs()
+    const next = current.map((s) => (s.id === id ? { ...s, status } : s))
+    await saveSubs(next)
+  } catch (err) {
+    console.warn('[subtrack] setStatus failed', err)
+  }
+}
+
+export const pauseSub = (id: string) => setStatus(id, 'paused')
+export const resumeSub = (id: string) => setStatus(id, 'active')
+export const cancelSub = (id: string) => setStatus(id, 'cancelled')
 
 export function formatINR(n: number, opts?: { withCents?: boolean }): string {
   const withCents = opts?.withCents ?? false

@@ -21,8 +21,11 @@ import {
   addSub as addSubStore,
   deleteSub as deleteSubStore,
   updateSub as updateSubStore,
+  pauseSub as pauseSubStore,
+  resumeSub as resumeSubStore,
+  cancelSub as cancelSubStore,
 } from '../lib/store'
-import type { Subscription } from '../lib/types'
+import type { Subscription, SubStatus } from '../lib/types'
 import { colors, spacing } from '../theme'
 
 export default function HomeScreen() {
@@ -34,7 +37,12 @@ export default function HomeScreen() {
   const [subs, setSubs] = useState<Subscription[]>([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editSub, setEditSub] = useState<Subscription | null>(null)
-  const [detailSub, setDetailSub] = useState<Subscription | null>(null)
+  // Track the OPEN sub by id, not by snapshot — that way pause/resume/cancel
+  // from inside the sheet re-derive `detailSub` from the fresh `subs` array.
+  const [detailSubId, setDetailSubId] = useState<string | null>(null)
+  const detailSub = detailSubId
+    ? subs.find((s) => s.id === detailSubId) ?? null
+    : null
   const [tab, setTab] = useState<NavTab>('home')
 
   useEffect(() => {
@@ -51,9 +59,36 @@ export default function HomeScreen() {
     void deleteSubStore(id)
   }
 
+  // Semantic status changes — every derived metric (Due Payment total, Active
+  // count, orbit icons, Expense %) already filters on status === 'active' via
+  // useMemo, so flipping one sub's status here causes those to recompute
+  // immediately on the next render. No extra plumbing needed for "real-time
+  // dashboard updates" — that falls out of the state model.
+  const setStatus = (id: string, status: SubStatus) => {
+    setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)))
+  }
+  const handlePause = (id: string) => {
+    setStatus(id, 'paused')
+    void pauseSubStore(id)
+  }
+  const handleResume = (id: string) => {
+    setStatus(id, 'active')
+    void resumeSubStore(id)
+  }
+  const handleCancel = (id: string) => {
+    setStatus(id, 'cancelled')
+    void cancelSubStore(id)
+  }
+
+  const handleToggleAutoRenew = (sub: Subscription, autoRenew: boolean) => {
+    const next = { ...sub, autoRenew }
+    setSubs((prev) => prev.map((s) => (s.id === sub.id ? next : s)))
+    void updateSubStore(next)
+  }
+
   const handleEdit = (sub: Subscription) => {
     setEditSub(sub)
-    setDetailSub(null)
+    setDetailSubId(null)
     setModalOpen(true)
   }
 
@@ -106,7 +141,7 @@ export default function HomeScreen() {
             subs={subs}
             onDelete={handleDelete}
             onEdit={handleEdit}
-            onSelect={setDetailSub}
+            onSelect={(s) => setDetailSubId(s.id)}
           />
         </Section>
 
@@ -147,9 +182,13 @@ export default function HomeScreen() {
 
       <SubDetailSheet
         sub={detailSub}
-        onClose={() => setDetailSub(null)}
+        onClose={() => setDetailSubId(null)}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onPause={handlePause}
+        onResume={handleResume}
+        onCancel={handleCancel}
+        onToggleAutoRenew={handleToggleAutoRenew}
       />
     </SafeAreaView>
   )

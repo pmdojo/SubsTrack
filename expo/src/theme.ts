@@ -25,7 +25,10 @@ export const colors = {
   successDot: '#22C55E',
   danger: '#DC2626',
   dangerBg: '#FDECEC',
-  warn: '#F59E0B',
+  warn: '#B45309',
+  warnBg: '#FEF3C7',
+  neutral: '#57534E',
+  neutralBg: '#EEEBE4',
 
   chip: '#EEECEA',
   chipInk: '#5A5854',

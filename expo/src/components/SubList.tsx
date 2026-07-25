@@ -67,6 +67,17 @@ function SubRow({
   const [actionsOpen, setActionsOpen] = useState(false)
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isActive = sub.status === 'active'
+  // Palette per status — keeps the row visually informative without a legend
+  const statusPalette: Record<
+    string,
+    { bg: string; fg: string; label: string; prefix: string }
+  > = {
+    active:    { bg: colors.successBg, fg: colors.success, label: 'Active',    prefix: 'Renews: ' },
+    paused:    { bg: colors.warnBg,    fg: colors.warn,    label: 'Paused',    prefix: 'Paused since: ' },
+    cancelled: { bg: colors.neutralBg, fg: colors.neutral, label: 'Cancelled', prefix: 'Ended: ' },
+    expired:   { bg: colors.dangerBg,  fg: colors.danger,  label: 'Expired',   prefix: 'Expired: ' },
+  }
+  const p = statusPalette[sub.status] ?? statusPalette.active
 
   const startPress = () => {
     setPressed(true)
@@ -99,10 +110,13 @@ function SubRow({
         delayLongPress={500}
         style={[
           styles.row,
+          // Dim non-active rows so the active ones remain the focal point
+          !isActive && { opacity: 0.72 },
           pressed && {
             transform: [{ translateY: -2 }],
             shadowOpacity: 0.12,
             shadowRadius: 20,
+            opacity: 1,
           },
         ]}
       >
@@ -121,26 +135,12 @@ function SubRow({
             <View style={styles.chip}>
               <Text style={styles.chipText}>Card **** {sub.cardLast4}</Text>
             </View>
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: isActive ? colors.successBg : colors.dangerBg,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  { color: isActive ? colors.success : colors.danger },
-                ]}
-              >
-                {isActive ? 'Active Subscription' : 'Expired'}
-              </Text>
+            <View style={[styles.badge, { backgroundColor: p.bg }]}>
+              <Text style={[styles.badgeText, { color: p.fg }]}>{p.label}</Text>
             </View>
           </View>
           <Text style={styles.expiry} numberOfLines={1}>
-            {isActive ? 'Renews: ' : 'Expired: '}
+            {p.prefix}
             {formatExpiryLabel(sub.billingDate)}
           </Text>
         </View>

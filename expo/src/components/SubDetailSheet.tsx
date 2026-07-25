@@ -1,15 +1,16 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { MotiView, AnimatePresence } from '../lib/motion'
-import { colors, elevation, font, radius, spacing } from '../theme'
-import type { Subscription } from '../lib/types'
+import { colors, elevation, font, radius } from '../theme'
+import type { Subscription, SubStatus } from '../lib/types'
 import { formatINR } from '../lib/store'
 
 type Props = {
@@ -17,58 +18,66 @@ type Props = {
   onClose: () => void
   onEdit: (sub: Subscription) => void
   onDelete: (id: string) => void
+  onPause: (id: string) => void
+  onResume: (id: string) => void
+  onCancel: (id: string) => void
+  onToggleAutoRenew?: (sub: Subscription, autoRenew: boolean) => void
 }
 
 type ActionKind =
-  | 'manage'
-  | 'pause'
-  | 'renew'
+  | 'pause-toggle'
   | 'cancel'
-  | 'change-card'
-  | 'reminder'
-  | 'export'
-  | 'history'
-
-const SECONDARY: {
-  key: Exclude<ActionKind, 'manage'>
-  label: string
-  icon: keyof typeof Feather.glyphMap
-  tone?: 'default' | 'danger'
-}[] = [
-  { key: 'pause', label: 'Pause Subscription', icon: 'pause-circle' },
-  { key: 'renew', label: 'Renew Now', icon: 'rotate-ccw' },
-  { key: 'change-card', label: 'Change Payment Method', icon: 'credit-card' },
-  { key: 'reminder', label: 'Reminder Settings', icon: 'bell' },
-  { key: 'export', label: 'Export Invoice', icon: 'download' },
-  { key: 'history', label: 'View Billing History', icon: 'clock' },
-  { key: 'cancel', label: 'Cancel Subscription', icon: 'x-circle', tone: 'danger' },
-]
+  | 'delete'
+  | 'change-plan'
+  | 'payment-history'
+  | 'renew'
+  | 'support'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-IN', {
     day: 'numeric',
-    month: 'short',
+    month: 'long',
     year: 'numeric',
   })
 }
 
-export default function SubDetailSheet({ sub, onClose, onEdit, onDelete }: Props) {
-  const [toast, setToast] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState<ActionKind | null>(null)
+const STATUS_META: Record<
+  SubStatus,
+  { label: string; dot: string; fg: string; bg: string }
+> = {
+  active:    { label: 'Active',    dot: '🟢', fg: colors.success, bg: colors.successBg },
+  paused:    { label: 'Paused',    dot: '🟡', fg: colors.warn,    bg: colors.warnBg    },
+  cancelled: { label: 'Cancelled', dot: '⚪', fg: colors.neutral, bg: colors.neutralBg },
+  expired:   { label: 'Expired',   dot: '🔴', fg: colors.danger,  bg: colors.dangerBg  },
+}
 
-  const meta = useMemo(() => {
-    if (!sub) return null
-    return [
-      { label: 'Amount', value: `${formatINR(sub.price)} / month`, icon: 'dollar-sign' as const },
-      { label: 'Billing Cycle', value: 'Monthly', icon: 'refresh-cw' as const },
-      { label: 'Payment Method', value: `Card •••• ${sub.cardLast4}`, icon: 'credit-card' as const },
-      { label: 'Renewal Date', value: formatDate(sub.billingDate), icon: 'calendar' as const },
-      { label: 'Category', value: sub.category, icon: 'grid' as const },
-      { label: 'Status', value: sub.status === 'active' ? 'Active' : 'Expired', icon: 'zap' as const },
-    ]
-  }, [sub])
+export default function SubDetailSheet({
+  sub,
+  onClose,
+  onEdit,
+  onDelete,
+  onPause,
+  onResume,
+  onCancel,
+  onToggleAutoRenew,
+}: Props) {
+  const [toast, setToast] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState<
+    'cancel' | 'delete' | null
+  >(null)
+
+  if (!sub) {
+    return (
+      <AnimatePresence>{null}</AnimatePresence>
+    )
+  }
+
+  const status = STATUS_META[sub.status]
+  const autoRenew = sub.autoRenew ?? true
+  const isPaused = sub.status === 'paused'
+  const isTerminal = sub.status === 'cancelled' || sub.status === 'expired'
 
   const fireToast = (msg: string) => {
     setToast(msg)
@@ -76,268 +85,339 @@ export default function SubDetailSheet({ sub, onClose, onEdit, onDelete }: Props
   }
 
   const handleAction = (kind: ActionKind) => {
-    if (!sub) return
-    if (kind === 'cancel' || kind === 'pause') {
-      setConfirming(kind)
+    if (kind === 'pause-toggle') {
+      if (isPaused) {
+        onResume(sub.id)
+        fireToast(`${sub.name} resumed`)
+      } else if (sub.status === 'active') {
+        setConfirming(null)
+        onPause(sub.id)
+        fireToast(`${sub.name} paused`)
+      } else {
+        // cancelled/expired → treat as resume-to-active
+        onResume(sub.id)
+        fireToast(`${sub.name} reactivated`)
+      }
       return
     }
-    if (kind === 'manage') {
+    if (kind === 'cancel') {
+      setConfirming('cancel')
+      return
+    }
+    if (kind === 'delete') {
+      setConfirming('delete')
+      return
+    }
+    if (kind === 'change-plan') {
       onEdit(sub)
       onClose()
       return
     }
-    const labels: Partial<Record<ActionKind, string>> = {
+    const labels: Record<ActionKind, string> = {
+      'payment-history': 'Payment history opened',
       renew: 'Renewed for next cycle',
-      'change-card': 'Payment method updated',
-      reminder: 'Reminder saved',
-      export: 'Invoice exported',
-      history: 'Billing history opened',
+      support: 'Support chat launching…',
+      'pause-toggle': '',
+      cancel: '',
+      delete: '',
+      'change-plan': '',
     }
-    fireToast(labels[kind] ?? 'Done')
+    fireToast(labels[kind])
   }
 
-  const confirmAction = () => {
-    if (!sub || !confirming) return
+  const confirmDestructive = () => {
     if (confirming === 'cancel') {
-      onDelete(sub.id)
+      onCancel(sub.id)
       fireToast('Subscription cancelled')
       setConfirming(null)
-      setTimeout(onClose, 700)
-      return
-    }
-    if (confirming === 'pause') {
-      fireToast(`${sub.name} paused`)
+    } else if (confirming === 'delete') {
+      const name = sub.name
+      onDelete(sub.id)
+      fireToast(`${name} deleted`)
       setConfirming(null)
+      setTimeout(onClose, 600)
     }
   }
+
+  // Action list — reflects the spec, with dynamic pause/resume label
+  const actions: {
+    kind: ActionKind
+    label: string
+    icon: keyof typeof Feather.glyphMap
+    tone?: 'default' | 'danger'
+    disabled?: boolean
+  }[] = [
+    {
+      kind: 'pause-toggle',
+      label: isPaused
+        ? 'Resume Subscription'
+        : isTerminal
+          ? 'Reactivate Subscription'
+          : 'Pause Subscription',
+      icon: isPaused ? 'play-circle' : 'pause-circle',
+    },
+    {
+      kind: 'cancel',
+      label: 'Cancel Subscription',
+      icon: 'slash',
+      tone: 'danger',
+      disabled: isTerminal,
+    },
+    { kind: 'change-plan',     label: 'Change Plan',         icon: 'sliders' },
+    { kind: 'payment-history', label: 'View Payment History', icon: 'clock' },
+    {
+      kind: 'renew',
+      label: 'Renew Now',
+      icon: 'rotate-ccw',
+      disabled: sub.status === 'paused',
+    },
+    { kind: 'support',         label: 'Contact Support',      icon: 'help-circle' },
+    { kind: 'delete',          label: 'Delete Permanently',   icon: 'trash-2', tone: 'danger' },
+  ]
 
   return (
     <AnimatePresence>
-      {sub && (
-        <>
-          <MotiView
-            key="backdrop"
-            from={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: 'timing', duration: 200 }}
-            style={styles.backdrop}
-          >
-            <Pressable style={{ flex: 1 }} onPress={onClose} />
-          </MotiView>
+      <>
+        <MotiView
+          key="backdrop"
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ type: 'timing', duration: 200 }}
+          style={styles.backdrop}
+        >
+          <Pressable style={{ flex: 1 }} onPress={onClose} />
+        </MotiView>
 
-          <MotiView
-            key="sheet"
-            from={{ translateY: 800 }}
-            animate={{ translateY: 0 }}
-            exit={{ translateY: 800 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 240 }}
-            style={styles.sheetWrap}
-          >
-            <View style={styles.sheet}>
-              <View style={styles.grabber} />
+        <MotiView
+          key="sheet"
+          from={{ translateY: 800 }}
+          animate={{ translateY: 0 }}
+          exit={{ translateY: 800 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 240 }}
+          style={styles.sheetWrap}
+        >
+          <View style={styles.sheet}>
+            <View style={styles.grabber} />
 
-              <View style={styles.headRow}>
-                <View style={[styles.icon, { backgroundColor: sub.color }]}>
-                  <Text style={styles.iconText}>{sub.icon}</Text>
-                </View>
-                <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text style={styles.name}>{sub.name}</Text>
-                  <View style={styles.badgeRow}>
+            {/* Header — icon + name + close */}
+            <View style={styles.headRow}>
+              <View style={[styles.icon, { backgroundColor: sub.color }]}>
+                <Text style={styles.iconText}>{sub.icon}</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 14 }}>
+                <Text style={styles.name}>{sub.name}</Text>
+                <Text style={styles.category}>{sub.category}</Text>
+              </View>
+              <Pressable
+                onPress={onClose}
+                style={styles.closeBtn}
+                hitSlop={12}
+              >
+                <Feather name="x" size={18} color={colors.ink} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 24 }}
+            >
+              {/* Info list — key/value rows */}
+              <View style={styles.infoCard}>
+                <InfoRow
+                  label="Status"
+                  right={
                     <View
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor:
-                            sub.status === 'active'
-                              ? colors.successBg
-                              : colors.dangerBg,
-                        },
-                      ]}
+                      style={[styles.statusPill, { backgroundColor: status.bg }]}
                     >
-                      <Text
-                        style={[
-                          styles.badgeText,
-                          {
-                            color:
-                              sub.status === 'active'
-                                ? colors.success
-                                : colors.danger,
-                          },
-                        ]}
-                      >
-                        {sub.status === 'active' ? 'Active' : 'Expired'}
+                      <Text style={styles.statusDot}>{status.dot}</Text>
+                      <Text style={[styles.statusText, { color: status.fg }]}>
+                        {status.label}
                       </Text>
                     </View>
-                    <Text style={styles.category}>{sub.category}</Text>
-                  </View>
-                </View>
-                <Pressable
-                  onPress={onClose}
-                  style={styles.closeBtn}
-                  hitSlop={12}
-                >
-                  <Feather name="x" size={18} color={colors.ink} />
-                </Pressable>
+                  }
+                />
+                <Divider />
+                <InfoRow label="Plan" value={sub.plan ?? 'Standard'} />
+                <Divider />
+                <InfoRow
+                  label="Monthly Cost"
+                  value={formatINR(sub.price)}
+                  valueBold
+                />
+                <Divider />
+                <InfoRow
+                  label="Next Billing"
+                  value={formatDate(sub.billingDate)}
+                />
+                <Divider />
+                <InfoRow
+                  label="Payment Method"
+                  value={`•••• ${sub.cardLast4}`}
+                />
+                <Divider />
+                <InfoRow
+                  label="Auto Renewal"
+                  right={
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text
+                        style={[
+                          styles.autoLabel,
+                          { color: autoRenew ? colors.success : colors.muted },
+                        ]}
+                      >
+                        {autoRenew ? 'ON' : 'OFF'}
+                      </Text>
+                      <Switch
+                        value={autoRenew}
+                        onValueChange={(v) => {
+                          onToggleAutoRenew?.(sub, v)
+                          fireToast(v ? 'Auto renewal enabled' : 'Auto renewal disabled')
+                        }}
+                        trackColor={{ true: colors.primary, false: '#D6D3CB' }}
+                        thumbColor="#fff"
+                      />
+                    </View>
+                  }
+                />
               </View>
 
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={{ flex: 1 }}
-                contentContainerStyle={{ paddingBottom: 20 }}
-              >
-                {/* Amount panel */}
-                <View style={styles.pricePanel}>
-                  <Text style={styles.priceLabel}>Next Charge</Text>
-                  <Text style={styles.priceValue}>{formatINR(sub.price)}</Text>
-                  <Text style={styles.priceSub}>
-                    on {formatDate(sub.billingDate)}
-                  </Text>
-                </View>
-
-                {/* Meta grid */}
-                <View style={styles.metaGrid}>
-                  {meta!.map((m) => (
-                    <View key={m.label} style={styles.metaTile}>
-                      <View style={styles.metaIcon}>
-                        <Feather
-                          name={m.icon}
-                          size={14}
-                          color={colors.primary}
-                        />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.metaLabel}>{m.label}</Text>
-                        <Text style={styles.metaValue}>{m.value}</Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Primary action */}
-                <Pressable
-                  onPress={() => handleAction('manage')}
-                  style={({ pressed }) => [
-                    styles.primaryBtn,
-                    pressed && { transform: [{ translateY: -1 }] },
-                  ]}
-                >
-                  <Feather name="sliders" size={16} color="#fff" />
-                  <Text style={styles.primaryBtnText}>Manage Subscription</Text>
-                </Pressable>
-
-                {/* Secondary actions */}
-                <View style={{ marginTop: 18, gap: 6 }}>
-                  {SECONDARY.map((a) => (
-                    <Pressable
-                      key={a.key}
-                      onPress={() => handleAction(a.key)}
-                      style={({ pressed }) => [
-                        styles.actionRow,
-                        pressed && { backgroundColor: '#F0EEFE' },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.actionIcon,
-                          a.tone === 'danger' && { backgroundColor: '#FDECEC' },
-                        ]}
-                      >
-                        <Feather
-                          name={a.icon}
-                          size={15}
-                          color={a.tone === 'danger' ? colors.danger : colors.ink}
-                        />
-                      </View>
-                      <Text
-                        style={[
-                          styles.actionLabel,
-                          a.tone === 'danger' && { color: colors.danger },
-                        ]}
-                      >
-                        {a.label}
-                      </Text>
-                      <Feather
-                        name="chevron-right"
-                        size={16}
-                        color={colors.muted}
-                      />
-                    </Pressable>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-          </MotiView>
-
-          {/* Confirmation dialog */}
-          {confirming && (
-            <MotiView
-              key="confirm"
-              from={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ type: 'spring', damping: 22, stiffness: 260 }}
-              style={styles.confirmWrap}
-            >
-              <View style={styles.confirm}>
-                <Text style={styles.confirmTitle}>
-                  {confirming === 'cancel'
-                    ? 'Cancel this subscription?'
-                    : 'Pause this subscription?'}
-                </Text>
-                <Text style={styles.confirmBody}>
-                  {confirming === 'cancel'
-                    ? "You'll lose access at the end of your current cycle. This can't be undone."
-                    : `${sub.name} won't renew until you resume.`}
-                </Text>
-                <View style={styles.confirmRow}>
+              {/* Actions */}
+              <View style={styles.actionsGroup}>
+                {actions.map((a) => (
                   <Pressable
-                    onPress={() => setConfirming(null)}
-                    style={[styles.confirmBtn, styles.confirmBtnGhost]}
-                  >
-                    <Text style={styles.confirmBtnGhostText}>Keep</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={confirmAction}
-                    style={[
-                      styles.confirmBtn,
-                      confirming === 'cancel'
-                        ? styles.confirmBtnDanger
-                        : styles.confirmBtnPrimary,
+                    key={a.kind}
+                    onPress={() => !a.disabled && handleAction(a.kind)}
+                    style={({ pressed }) => [
+                      styles.actionRow,
+                      pressed && !a.disabled && { backgroundColor: '#F0EEFE' },
+                      a.disabled && { opacity: 0.35 },
                     ]}
                   >
-                    <Text style={styles.confirmBtnFilledText}>
-                      {confirming === 'cancel' ? 'Cancel' : 'Pause'}
+                    <View
+                      style={[
+                        styles.actionIcon,
+                        a.tone === 'danger' && { backgroundColor: colors.dangerBg },
+                      ]}
+                    >
+                      <Feather
+                        name={a.icon}
+                        size={16}
+                        color={a.tone === 'danger' ? colors.danger : colors.ink}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        styles.actionLabel,
+                        a.tone === 'danger' && { color: colors.danger },
+                      ]}
+                    >
+                      {a.label}
                     </Text>
+                    <Feather
+                      name="chevron-right"
+                      size={16}
+                      color={colors.muted}
+                    />
                   </Pressable>
-                </View>
+                ))}
               </View>
-            </MotiView>
-          )}
+            </ScrollView>
+          </View>
+        </MotiView>
 
-          {/* Toast */}
-          {toast && (
-            <MotiView
-              key="toast"
-              from={{ opacity: 0, translateY: 20 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              exit={{ opacity: 0, translateY: 20 }}
-              transition={{ type: 'timing', duration: 200 }}
-              style={styles.toast}
-            >
-              <Text style={styles.toastText}>{toast}</Text>
-            </MotiView>
-          )}
-        </>
-      )}
+        {/* Confirmation dialog */}
+        {confirming && (
+          <MotiView
+            key="confirm"
+            from={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 260 }}
+            style={styles.confirmWrap}
+          >
+            <View style={styles.confirm}>
+              <Text style={styles.confirmTitle}>
+                {confirming === 'cancel'
+                  ? `Cancel ${sub.name}?`
+                  : `Delete ${sub.name}?`}
+              </Text>
+              <Text style={styles.confirmBody}>
+                {confirming === 'cancel'
+                  ? "The subscription will be marked cancelled and stop counting toward your active total. You can reactivate it later."
+                  : "This removes the subscription from your list permanently. This can't be undone."}
+              </Text>
+              <View style={styles.confirmRow}>
+                <Pressable
+                  onPress={() => setConfirming(null)}
+                  style={[styles.confirmBtn, styles.confirmBtnGhost]}
+                >
+                  <Text style={styles.confirmBtnGhostText}>Keep</Text>
+                </Pressable>
+                <Pressable
+                  onPress={confirmDestructive}
+                  style={[styles.confirmBtn, styles.confirmBtnDanger]}
+                >
+                  <Text style={styles.confirmBtnFilledText}>
+                    {confirming === 'cancel' ? 'Cancel it' : 'Delete'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </MotiView>
+        )}
+
+        {/* Toast */}
+        {toast && (
+          <MotiView
+            key="toast"
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            exit={{ opacity: 0, translateY: 20 }}
+            transition={{ type: 'timing', duration: 200 }}
+            style={styles.toast}
+          >
+            <Text style={styles.toastText}>{toast}</Text>
+          </MotiView>
+        )}
+      </>
     </AnimatePresence>
   )
+}
+
+// ── Small helpers ───────────────────────────────────────────────────────────
+
+function InfoRow({
+  label,
+  value,
+  right,
+  valueBold,
+}: {
+  label: string
+  value?: string
+  right?: React.ReactNode
+  valueBold?: boolean
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      {right ?? (
+        <Text style={[styles.infoValue, valueBold && styles.infoValueBold]}>
+          {value}
+        </Text>
+      )}
+    </View>
+  )
+}
+
+function Divider() {
+  return <View style={styles.divider} />
 }
 
 const styles = StyleSheet.create({
   backdrop: {
     position: 'absolute',
-    inset: 0 as any,
     top: 0,
     left: 0,
     right: 0,
@@ -397,28 +477,14 @@ const styles = StyleSheet.create({
     fontFamily: font.bold,
   },
   name: {
-    fontSize: 22,
+    fontSize: 24,
     color: colors.ink,
     letterSpacing: -0.6,
     fontFamily: font.bold,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: font.bold,
-  },
   category: {
-    fontSize: 11,
+    marginTop: 2,
+    fontSize: 12,
     color: colors.muted,
     fontFamily: font.medium,
   },
@@ -430,101 +496,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pricePanel: {
-    backgroundColor: '#F7F5FF',
-    borderRadius: radius.xl,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#EEE9FE',
-  },
-  priceLabel: {
-    fontSize: 11,
-    color: '#6B6787',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontFamily: font.medium,
-  },
-  priceValue: {
-    fontSize: 32,
-    color: colors.ink,
-    letterSpacing: -1.1,
-    fontFamily: font.bold,
-    marginTop: 4,
-  },
-  priceSub: {
-    fontSize: 12,
-    color: colors.muted,
-    marginTop: 2,
-    fontFamily: font.regular,
-  },
-  metaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 4,
-  },
-  metaTile: {
-    width: '48.5%',
+  // Info panel
+  infoCard: {
     backgroundColor: '#F7F6F4',
-    borderRadius: radius.lg,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    borderRadius: radius.xl,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#EFEDE7',
+    borderColor: '#EEEBE4',
+    marginBottom: 20,
   },
-  metaIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#EEE9FE',
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 14,
+    minHeight: 44,
   },
-  metaLabel: {
-    fontSize: 10,
+  infoLabel: {
+    fontSize: 13,
     color: colors.muted,
     fontFamily: font.medium,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: -0.1,
   },
-  metaValue: {
-    fontSize: 13,
+  infoValue: {
+    fontSize: 14,
     color: colors.ink,
     fontFamily: font.semibold,
-    marginTop: 1,
+    letterSpacing: -0.2,
+    textAlign: 'right',
+    flexShrink: 1,
+    marginLeft: 12,
   },
-  primaryBtn: {
-    marginTop: 18,
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    ...elevation.float,
-    shadowColor: colors.primary,
-  },
-  primaryBtnText: {
-    color: '#fff',
+  infoValueBold: {
     fontSize: 15,
     fontFamily: font.bold,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEEBE4',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  statusDot: {
+    fontSize: 10,
+  },
+  statusText: {
+    fontSize: 12,
+    fontFamily: font.bold,
+    letterSpacing: -0.1,
+  },
+  autoLabel: {
+    fontSize: 12,
+    fontFamily: font.bold,
+    letterSpacing: 0.4,
+  },
+  // Actions
+  actionsGroup: {
+    gap: 4,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    gap: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: radius.md,
   },
   actionIcon: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     backgroundColor: '#F4F3F0',
     alignItems: 'center',
@@ -532,10 +579,12 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.ink,
     fontFamily: font.semibold,
+    letterSpacing: -0.2,
   },
+  // Confirm
   confirmWrap: {
     position: 'absolute',
     left: 24,
@@ -584,9 +633,6 @@ const styles = StyleSheet.create({
     fontFamily: font.bold,
     fontSize: 14,
   },
-  confirmBtnPrimary: {
-    backgroundColor: colors.primary,
-  },
   confirmBtnDanger: {
     backgroundColor: colors.danger,
   },
@@ -595,6 +641,7 @@ const styles = StyleSheet.create({
     fontFamily: font.bold,
     fontSize: 14,
   },
+  // Toast
   toast: {
     position: 'absolute',
     bottom: 40,
