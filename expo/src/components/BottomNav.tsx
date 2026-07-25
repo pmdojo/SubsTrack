@@ -4,7 +4,9 @@ import { Feather } from '@expo/vector-icons'
 import { MotiView } from '../lib/motion'
 import { colors, elevation, font, radius } from '../theme'
 
-export type NavTab = 'home' | 'subs' | 'analytics' | 'calendar' | 'profile'
+// 4 tabs (2 left + FAB slot + 2 right) — symmetric around the centered FAB
+// so the plus button never overlaps a label.
+export type NavTab = 'home' | 'subs' | 'analytics' | 'profile'
 
 type Props = {
   active: NavTab
@@ -17,11 +19,10 @@ const TABS: {
   label: string
   icon: keyof typeof Feather.glyphMap
 }[] = [
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'subs', label: 'Subs', icon: 'list' },
+  { key: 'home',      label: 'Home',  icon: 'home' },
+  { key: 'subs',      label: 'Subs',  icon: 'list' },
   { key: 'analytics', label: 'Stats', icon: 'bar-chart-2' },
-  { key: 'calendar', label: 'Cal', icon: 'calendar' },
-  { key: 'profile', label: 'You', icon: 'user' },
+  { key: 'profile',   label: 'You',   icon: 'user' },
 ]
 
 export default function BottomNav({ active, onSelect, onAdd }: Props) {
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.94)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 32,
     paddingHorizontal: 12,
     paddingVertical: 10,

@@ -170,9 +170,7 @@ export default function HomeScreen() {
                 ? 'All Subscriptions'
                 : tab === 'analytics'
                   ? 'Analytics'
-                  : tab === 'calendar'
-                    ? 'Calendar'
-                    : 'Profile'}
+                  : 'Profile'}
             </Text>
             <Text style={styles.tabPlaceholderSub}>
               Coming soon. Home is the fully-built screen for this pass.
