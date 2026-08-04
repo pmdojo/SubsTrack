@@ -17,6 +17,7 @@ import QuickActions from '../components/QuickActions'
 import SpendingOverview from '../components/SpendingOverview'
 import SubList from '../components/SubList'
 import AddSubModal from '../components/AddSubModal'
+import AddSubWizard from '../components/wizard/AddSubWizard'
 import BottomNav, { NavTab } from '../components/BottomNav'
 import SubDetailSheet from '../components/SubDetailSheet'
 import {
@@ -52,6 +53,10 @@ export default function HomeScreen() {
   const toast = useToast()
 
   // ── Local UI state ────────────────────────────────────────────────────
+  // `wizardOpen` drives the new 5-step Add flow (opened from the FAB and
+  // QuickActions "Add"). `modalOpen` still hosts the legacy single-form
+  // Edit modal — editing a sub keeps its lighter-weight UX for now.
+  const [wizardOpen, setWizardOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editSub, setEditSub] = useState<Subscription | null>(null)
   // Track the OPEN sub by id, not by snapshot — the sheet re-derives
@@ -157,12 +162,7 @@ export default function HomeScreen() {
         </Section>
 
         <Section delay={200}>
-          <QuickActions
-            onAdd={() => {
-              setEditSub(null)
-              setModalOpen(true)
-            }}
-          />
+          <QuickActions onAdd={() => setWizardOpen(true)} />
         </Section>
 
         <Section delay={240}>
@@ -197,10 +197,12 @@ export default function HomeScreen() {
       <BottomNav
         active={tab}
         onSelect={setTab}
-        onAdd={() => {
-          setEditSub(null)
-          setModalOpen(true)
-        }}
+        onAdd={() => setWizardOpen(true)}
+      />
+
+      <AddSubWizard
+        visible={wizardOpen}
+        onClose={() => setWizardOpen(false)}
       />
 
       <AddSubModal
