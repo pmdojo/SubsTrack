@@ -36,6 +36,10 @@ export function useAuthBootstrap(): {
         if (existing) {
           setSession(existing)
           setReady(true)
+          log.track('session_resumed', {
+            userId: existing.user.id,
+            anon: existing.user.is_anonymous,
+          })
           return
         }
         // No existing session → anon sign-in
