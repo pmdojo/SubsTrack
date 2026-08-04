@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import {
   ScrollView,
   StyleSheet,
@@ -20,15 +20,16 @@ import AddSubModal from '../components/AddSubModal'
 import BottomNav, { NavTab } from '../components/BottomNav'
 import SubDetailSheet from '../components/SubDetailSheet'
 import {
-  getSubs,
-  addSub as addSubStore,
-  deleteSub as deleteSubStore,
-  updateSub as updateSubStore,
-  pauseSub as pauseSubStore,
-  resumeSub as resumeSubStore,
-  cancelSub as cancelSubStore,
-} from '../lib/store'
-import type { Subscription, SubStatus } from '../lib/types'
+  useSubs,
+  useInsertSub,
+  useUpdateSub,
+  useDeleteSub,
+  useSetSubStatus,
+} from '../features/subscriptions/hooks'
+import { useAuthBootstrap } from '../features/auth/hooks'
+import { useToast } from '../components/ui/UiProvider'
+import { t, copy } from '../lib/copy'
+import type { Subscription } from '../lib/types'
 import { colors, spacing } from '../theme'
 
 export default function HomeScreen() {
@@ -37,69 +38,65 @@ export default function HomeScreen() {
   const useOverlap = width >= 480
   const wideContainer = width >= 768
 
-  const [subs, setSubs] = useState<Subscription[]>([])
+  // ── Server state ──────────────────────────────────────────────────────
+  // useSubs pulls from Supabase when configured, falls back to the legacy
+  // AsyncStorage store otherwise. Every mutation below is optimistic — the
+  // cache updates before the network round-trip, so metrics + list + orbit
+  // re-render in the same frame.
+  const { user } = useAuthBootstrap()
+  const { data: subs = [] } = useSubs()
+  const insertSubM = useInsertSub(user?.id ?? null)
+  const updateSubM = useUpdateSub()
+  const deleteSubM = useDeleteSub()
+  const setStatusM = useSetSubStatus()
+  const toast = useToast()
+
+  // ── Local UI state ────────────────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false)
   const [editSub, setEditSub] = useState<Subscription | null>(null)
-  // Track the OPEN sub by id, not by snapshot — that way pause/resume/cancel
-  // from inside the sheet re-derive `detailSub` from the fresh `subs` array.
+  // Track the OPEN sub by id, not by snapshot — the sheet re-derives
+  // `detailSub` from the fresh `subs` array on every render, so pause /
+  // resume / cancel inside the sheet reflect instantly.
   const [detailSubId, setDetailSubId] = useState<string | null>(null)
   const detailSub = detailSubId
     ? subs.find((s) => s.id === detailSubId) ?? null
     : null
   const [tab, setTab] = useState<NavTab>('home')
 
-  useEffect(() => {
-    getSubs().then(setSubs)
-  }, [])
+  // ── Handlers ──────────────────────────────────────────────────────────
 
   const handleAdd = (sub: Subscription) => {
-    setSubs((prev) => [sub, ...prev])
-    void addSubStore(sub)
+    insertSubM.mutate(sub)
+    toast(t(copy.toast.added, { name: sub.name }), { kind: 'success' })
   }
 
   const handleDelete = (id: string) => {
-    setSubs((prev) => prev.filter((s) => s.id !== id))
-    void deleteSubStore(id)
+    const name = subs.find((s) => s.id === id)?.name ?? 'Subscription'
+    deleteSubM.mutate(id)
+    toast(t(copy.toast.deleted, { name }))
   }
 
-  // Semantic status changes — every derived metric (Due Payment total, Active
-  // count, orbit icons, Expenses %, MetricsBar tiles) already filters/derives
-  // from `subs` via useMemo. Flipping status here → all metrics re-render in
-  // the same frame. Timestamps power the Cancelled-this-Month / Saved-this-Year
-  // math and must be stamped locally alongside the async store write.
-  const setStatus = (id: string, status: SubStatus) => {
-    const nowIso = new Date().toISOString()
-    setSubs((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s
-        const next = { ...s, status }
-        if (status === 'paused') next.pausedAt = nowIso
-        if (status === 'cancelled') next.cancelledAt = nowIso
-        if (status === 'active') {
-          next.pausedAt = undefined
-          next.cancelledAt = undefined
-        }
-        return next
-      })
-    )
-  }
   const handlePause = (id: string) => {
-    setStatus(id, 'paused')
-    void pauseSubStore(id)
+    const name = subs.find((s) => s.id === id)?.name ?? 'Subscription'
+    setStatusM.mutate({ id, status: 'paused' })
+    toast(t(copy.toast.paused, { name }))
   }
+
   const handleResume = (id: string) => {
-    setStatus(id, 'active')
-    void resumeSubStore(id)
+    const name = subs.find((s) => s.id === id)?.name ?? 'Subscription'
+    setStatusM.mutate({ id, status: 'active' })
+    toast(t(copy.toast.resumed, { name }))
   }
+
   const handleCancel = (id: string) => {
-    setStatus(id, 'cancelled')
-    void cancelSubStore(id)
+    const name = subs.find((s) => s.id === id)?.name ?? 'Subscription'
+    setStatusM.mutate({ id, status: 'cancelled' })
+    toast(t(copy.toast.cancelled, { name }))
   }
 
   const handleToggleAutoRenew = (sub: Subscription, autoRenew: boolean) => {
-    const next = { ...sub, autoRenew }
-    setSubs((prev) => prev.map((s) => (s.id === sub.id ? next : s)))
-    void updateSubStore(next)
+    updateSubM.mutate({ ...sub, autoRenew })
+    toast(autoRenew ? copy.toast.autoRenewOn : copy.toast.autoRenewOff)
   }
 
   const handleEdit = (sub: Subscription) => {
@@ -109,8 +106,8 @@ export default function HomeScreen() {
   }
 
   const handleEditSave = (sub: Subscription) => {
-    setSubs((prev) => prev.map((s) => (s.id === sub.id ? sub : s)))
-    void updateSubStore(sub)
+    updateSubM.mutate(sub)
+    toast(t(copy.toast.updated, { name: sub.name }), { kind: 'success' })
     setEditSub(null)
   }
 
