@@ -11,7 +11,7 @@ import {
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans'
 import HomeScreen from './src/screens/HomeScreen'
-import { UiProvider } from './src/components/ui/UiProvider'
+import { AppProviders } from './src/AppProviders'
 import { colors } from './src/theme'
 
 const SPLASH_TIMEOUT_MS = 2000
@@ -44,9 +44,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <UiProvider>
+      <AppProviders>
         <HomeScreen />
-      </UiProvider>
+      </AppProviders>
     </SafeAreaProvider>
   )
 }
