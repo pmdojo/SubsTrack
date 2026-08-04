@@ -3,6 +3,11 @@ import type { ViewStyle } from 'react-native'
 export const colors = {
   bg: '#F4F3F0',
   bgSubtle: '#EDEBE6',
+  // Warm cream → lavender gradient stops used for the app background
+  bgGradient: ['#FBF7F1', '#F4EFF7', '#EDE7F5'] as const,
+  // Neutral tinted surface used for quick-action buttons and info tiles
+  surface: '#FFFFFF',
+  surfaceMuted: '#F4EFEA',
   card: '#FFFFFF',
   cardMuted: '#F7F6F4',
   ink: '#1A1917',

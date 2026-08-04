@@ -7,11 +7,13 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
 import { MotiView } from '../lib/motion'
 import Header from '../components/Header'
 import DuePaymentCard from '../components/DuePaymentCard'
 import ActiveSubsHeroCard from '../components/ActiveSubsHeroCard'
 import MetricsBar from '../components/MetricsBar'
+import QuickActions from '../components/QuickActions'
 import SpendingOverview from '../components/SpendingOverview'
 import SubList from '../components/SubList'
 import AddSubModal from '../components/AddSubModal'
@@ -118,6 +120,13 @@ export default function HomeScreen() {
   }
 
   return (
+    <LinearGradient
+      colors={colors.bgGradient as unknown as [string, string, string]}
+      locations={[0, 0.55, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={{ flex: 1 }}
+    >
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
         contentContainerStyle={[
@@ -150,7 +159,16 @@ export default function HomeScreen() {
           <MetricsBar subs={subs} />
         </Section>
 
-        <Section delay={220}>
+        <Section delay={200}>
+          <QuickActions
+            onAdd={() => {
+              setEditSub(null)
+              setModalOpen(true)
+            }}
+          />
+        </Section>
+
+        <Section delay={240}>
           <SpendingOverview subs={subs} />
         </Section>
 
@@ -207,6 +225,7 @@ export default function HomeScreen() {
         onToggleAutoRenew={handleToggleAutoRenew}
       />
     </SafeAreaView>
+    </LinearGradient>
   )
 }
 
@@ -231,7 +250,7 @@ function Section({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: 'transparent', // gradient sits behind
   },
   container: {
     maxWidth: 520,

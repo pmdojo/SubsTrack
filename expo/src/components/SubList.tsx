@@ -22,6 +22,20 @@ function formatExpiryLabel(billingDate: string): string {
   })
 }
 
+// Returns a short "TODAY / N DAYS" chip label for active subs billing soon,
+// or null when the sub either isn't active or bills more than a week out.
+function upcomingChip(sub: Subscription): string | null {
+  if (sub.status !== 'active') return null
+  const t = new Date(sub.billingDate).getTime()
+  if (Number.isNaN(t)) return null
+  const days = Math.ceil((t - Date.now()) / (24 * 60 * 60 * 1000))
+  if (days < 0) return null
+  if (days === 0) return 'TODAY'
+  if (days === 1) return '1 DAY'
+  if (days <= 7) return `${days} DAYS`
+  return null
+}
+
 export default function SubList({ subs, onDelete, onEdit, onSelect }: Props) {
   return (
     <View>
@@ -128,18 +142,24 @@ function SubRow({
         />
 
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
-            {sub.name}
-          </Text>
-          <View style={styles.detailRow}>
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>Card **** {sub.cardLast4}</Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: p.bg }]}>
-              <Text style={[styles.badgeText, { color: p.fg }]}>{p.label}</Text>
-            </View>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {sub.name}
+            </Text>
+            {upcomingChip(sub) ? (
+              <View style={styles.dayChip}>
+                <Text style={styles.dayChipText}>{upcomingChip(sub)}</Text>
+              </View>
+            ) : (
+              <View style={[styles.badge, { backgroundColor: p.bg }]}>
+                <Text style={[styles.badgeText, { color: p.fg }]}>
+                  {p.label}
+                </Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.expiry} numberOfLines={1}>
+          <Text style={styles.metaLine} numberOfLines={1}>
+            {sub.plan ? `${sub.plan} · ` : ''}
             {p.prefix}
             {formatExpiryLabel(sub.billingDate)}
           </Text>
@@ -149,7 +169,7 @@ function SubRow({
           <Text style={styles.price}>
             {formatINR(sub.price, { withCents: false })}
           </Text>
-          <Text style={styles.priceMo}>/month</Text>
+          <Text style={styles.priceMo}>per month</Text>
         </View>
 
         <AnimatePresence>
@@ -319,28 +339,28 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     fontFamily: 'DMSans_700Bold',
   },
-  detailRow: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+    gap: 8,
     flexWrap: 'wrap',
   },
-  chip: {
-    backgroundColor: colors.chip,
+  // "TODAY" / "N DAYS" chip for imminent renewals — amber like reference
+  dayChip: {
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radius.pill,
   },
-  chipText: {
+  dayChipText: {
     fontSize: 10,
-    color: '#6E6B67',
-    fontWeight: '500',
-    fontFamily: 'DMSans_500Medium',
+    color: '#B45309',
+    fontFamily: 'DMSans_700Bold',
+    letterSpacing: 0.5,
   },
-  expiry: {
+  metaLine: {
     marginTop: 6,
-    fontSize: 10,
+    fontSize: 11,
     color: colors.muted,
     fontFamily: 'DMSans_400Regular',
   },

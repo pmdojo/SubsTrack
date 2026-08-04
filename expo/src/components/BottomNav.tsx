@@ -1,8 +1,8 @@
 import React from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 import { Feather } from '@expo/vector-icons'
 import { MotiView } from '../lib/motion'
-import { colors, elevation, font, radius } from '../theme'
+import { colors, elevation } from '../theme'
 
 // 4 tabs (2 left + FAB slot + 2 right) — symmetric around the centered FAB
 // so the plus button never overlaps a label.
@@ -85,20 +85,23 @@ function NavItem({
   onPress: () => void
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.item}>
-      <Feather
-        name={tab.icon}
-        size={20}
-        color={active ? colors.primary : '#9C9990'}
-      />
-      <Text
+    <Pressable
+      onPress={onPress}
+      style={styles.item}
+      accessibilityLabel={tab.label}
+    >
+      <View
         style={[
-          styles.label,
-          { color: active ? colors.primary : '#9C9990' },
+          styles.iconWrap,
+          active && styles.iconWrapActive,
         ]}
       >
-        {tab.label}
-      </Text>
+        <Feather
+          name={tab.icon}
+          size={22}
+          color={active ? colors.primary : '#B5B2A8'}
+        />
+      </View>
       {active && <View style={styles.activeDot} />}
     </Pressable>
   )
@@ -133,40 +136,51 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
     position: 'relative',
   },
-  label: {
-    marginTop: 3,
-    fontSize: 10,
-    fontFamily: font.semibold,
-    letterSpacing: -0.1,
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Active icon sits in a soft lavender circle — subtle "selected" cue
+  iconWrapActive: {
+    backgroundColor: '#EDE9FE',
   },
   activeDot: {
     position: 'absolute',
-    bottom: -1,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    bottom: -3,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: colors.primary,
   },
   fab: {
     position: 'absolute',
-    top: -18,
+    top: -22,
     alignSelf: 'center',
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...elevation.hero,
+    // Deeper primary-tinted shadow → looks like it glows above the bar
     shadowColor: colors.primary,
+    shadowOpacity: 0.55,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 16,
+    borderWidth: 4,
+    borderColor: '#FBF7F1', // matches the top of the app background gradient
   },
   fabInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
   },

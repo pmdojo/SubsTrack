@@ -29,8 +29,12 @@ export default function MetricsBar({ subs }: Props) {
         label="Monthly Spend"
         value={m.monthlySpend}
         format={(n) => formatINR(n)}
-        trend={m.monthlySpend > 0 ? 'up' : 'flat'}
+        trend="down"
         tone="primary"
+        // Mock delta — will pull from real historical data once we wire
+        // month-over-month persistence
+        deltaLabel="12% less than last month"
+        deltaGood
       />
       <MetricCard
         label="Annual Spend"
@@ -120,6 +124,8 @@ function MetricCard({
   tone = 'default',
   wide = false,
   subtext,
+  deltaLabel,
+  deltaGood,
 }: {
   label: string
   value: number
@@ -128,6 +134,9 @@ function MetricCard({
   tone?: Tone
   wide?: boolean
   subtext?: string
+  deltaLabel?: string
+  // deltaGood → render pill in green (savings), otherwise amber
+  deltaGood?: boolean
 }) {
   const toneStyles = toneMap[tone]
   const trendIcon: Record<Trend, keyof typeof Feather.glyphMap> = {
@@ -169,6 +178,35 @@ function MetricCard({
         <Text style={styles.subtext} numberOfLines={1}>
           {subtext}
         </Text>
+      ) : null}
+
+      {deltaLabel ? (
+        <View
+          style={[
+            styles.deltaPill,
+            {
+              backgroundColor: withAlpha(
+                deltaGood ? colors.success : colors.warn,
+                0.12
+              ),
+            },
+          ]}
+        >
+          <Feather
+            name={deltaGood ? 'trending-down' : 'trending-up'}
+            size={11}
+            color={deltaGood ? colors.success : colors.warn}
+          />
+          <Text
+            style={[
+              styles.deltaText,
+              { color: deltaGood ? colors.success : colors.warn },
+            ]}
+            numberOfLines={1}
+          >
+            {deltaLabel}
+          </Text>
+        </View>
       ) : null}
     </View>
   )
@@ -245,5 +283,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.muted,
     fontFamily: font.regular,
+  },
+  deltaPill: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  deltaText: {
+    fontSize: 10,
+    fontFamily: font.semibold,
+    letterSpacing: -0.1,
   },
 })
