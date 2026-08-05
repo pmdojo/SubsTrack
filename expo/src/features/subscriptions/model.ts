@@ -59,6 +59,8 @@ export function rowToSub(row: SubRow): Subscription {
     autoRenew: row.auto_renew,
     cancelledAt: row.cancelled_at ?? undefined,
     pausedAt: row.paused_at ?? undefined,
+    paymentMethodId: row.payment_method_id ?? undefined,
+    paymentBrand: row.payment_brand ?? undefined,
   }
 }
 
@@ -118,5 +120,6 @@ export function subToInsert(sub: Subscription, userId: string): SubInsert {
     status: sub.status,
     paused_at: sub.pausedAt ?? null,
     cancelled_at: sub.cancelledAt ?? null,
+    payment_method_id: sub.paymentMethodId ?? null,
   }
 }

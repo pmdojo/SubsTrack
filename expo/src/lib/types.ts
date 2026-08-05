@@ -14,4 +14,6 @@ export type Subscription = {
   autoRenew?: boolean // defaults to true when missing
   cancelledAt?: string // ISO date, set when status flips to 'cancelled'
   pausedAt?: string    // ISO date, set when status flips to 'paused'
+  paymentMethodId?: string // FK → payment_methods.id
+  paymentBrand?: string // Denormalised from the joined view (VISA / MC / …)
 }

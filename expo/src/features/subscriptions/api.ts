@@ -84,6 +84,7 @@ export async function updateSub(sub: Subscription): Promise<Subscription> {
       auto_renew: sub.autoRenew ?? true,
       status: sub.status,
       next_billing_at: sub.billingDate,
+      payment_method_id: sub.paymentMethodId ?? null,
     })
     .eq('id', sub.id)
     .select('*')

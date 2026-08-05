@@ -6,7 +6,8 @@ import StepIndicator from './StepIndicator'
 import Step1Search from './steps/Step1Search'
 import Step2Amount from './steps/Step2Amount'
 import Step3Cycle from './steps/Step3Cycle'
-import Step4Reminder from './steps/Step4Reminder'
+import Step4Payment from './steps/Step4Payment'
+import Step5Reminder from './steps/Step5Reminder'
 import { colors, elevation, font, radius, spacing } from '../../theme'
 import { useInsertSub } from '../../features/subscriptions/hooks'
 import { useAuthBootstrap } from '../../features/auth/hooks'
@@ -31,6 +32,7 @@ export type Draft = {
   firstBillingAt: string // YYYY-MM-DD
   categorySlug: string
   categoryLabel: string
+  paymentMethodId: string | null
   remindLeadDays: number
   autoRenew: boolean
   status: SubStatus
@@ -46,12 +48,13 @@ const EMPTY_DRAFT: Draft = {
   firstBillingAt: toIsoDate(addDays(new Date(), 30)),
   categorySlug: 'utility',
   categoryLabel: 'Utilities',
+  paymentMethodId: null,
   remindLeadDays: 2,
   autoRenew: true,
   status: 'active',
 }
 
-const TOTAL_STEPS = 4 // Payment methods (step 4 in spec) deferred to a later slice
+const TOTAL_STEPS = 5
 
 /**
  * Multi-step Add Subscription flow. Renders inside a full-height BottomSheet,
@@ -85,6 +88,11 @@ export default function AddSubWizard({ visible, onClose }: Props) {
       case 3:
         return !!draft.firstBillingAt
       case 4:
+        // Payment method is optional — user can skip and add it later from
+        // the detail screen. Requiring it would dead-end the flow for anyone
+        // who hasn't set up a card yet.
+        return true
+      case 5:
         return true
       default:
         return false
@@ -121,13 +129,18 @@ export default function AddSubWizard({ visible, onClose }: Props) {
       category: draft.categoryLabel,
       plan: draft.plan || undefined,
       autoRenew: draft.autoRenew,
+      paymentMethodId: draft.paymentMethodId ?? undefined,
     }
     insertSubM.mutate(sub)
     toast(t(copy.toast.added, { name: sub.name }), { kind: 'success' })
     onClose()
   }
 
-  const ctaLabel = step === TOTAL_STEPS ? 'Add Subscription' : 'Continue'
+  const ctaLabel = step === TOTAL_STEPS
+    ? 'Add Subscription'
+    : step === 4 && !draft.paymentMethodId
+      ? 'Skip for now'
+      : 'Continue'
 
   return (
     <BottomSheet visible={visible} onClose={onClose} heightFraction={0.92}>
@@ -157,7 +170,8 @@ export default function AddSubWizard({ visible, onClose }: Props) {
         {step === 1 && <Step1Search draft={draft} patch={patch} />}
         {step === 2 && <Step2Amount draft={draft} patch={patch} />}
         {step === 3 && <Step3Cycle draft={draft} patch={patch} />}
-        {step === 4 && <Step4Reminder draft={draft} patch={patch} />}
+        {step === 4 && <Step4Payment draft={draft} patch={patch} />}
+        {step === 5 && <Step5Reminder draft={draft} patch={patch} />}
       </ScrollView>
 
       {/* Sticky CTA */}
