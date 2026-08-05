@@ -21,6 +21,7 @@ import AddSubWizard from '../components/wizard/AddSubWizard'
 import BottomNav, { NavTab } from '../components/BottomNav'
 import SettingsScreen from './SettingsScreen'
 import CalendarScreen from './CalendarScreen'
+import InsightsScreen from './InsightsScreen'
 import SubDetailSheet from '../components/SubDetailSheet'
 import {
   useSubs,
@@ -167,7 +168,10 @@ export default function HomeScreen() {
             </Section>
 
             <Section delay={200}>
-              <QuickActions onAdd={() => setWizardOpen(true)} />
+              <QuickActions
+                onAdd={() => setWizardOpen(true)}
+                onInsights={() => setTab('analytics')}
+              />
             </Section>
 
             <Section delay={240}>
@@ -198,13 +202,9 @@ export default function HomeScreen() {
         ) : null}
 
         {tab === 'analytics' ? (
-          <View style={styles.tabPlaceholder}>
-            <Text style={styles.tabPlaceholderText}>Insights</Text>
-            <Text style={styles.tabPlaceholderSub}>
-              Coming in Phase 6.1 — spend by category, monthly trend, and
-              savings.
-            </Text>
-          </View>
+          <Section delay={40}>
+            <InsightsScreen />
+          </Section>
         ) : null}
       </ScrollView>
 
