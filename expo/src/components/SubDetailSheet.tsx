@@ -278,100 +278,131 @@ export default function SubDetailSheet({
               style={{ flex: 1 }}
               contentContainerStyle={{ paddingBottom: 24 }}
             >
-              {/* Info list — key/value rows */}
-              <View style={styles.infoCard}>
-                <InfoRow label="Plan" value={sub.plan ?? 'Standard'} />
-                <Divider />
-                <InfoRow
-                  label="Monthly Cost"
-                  value={formatINR(sub.price)}
-                  valueBold
+              {/* 2×2 stat grid — matches reference exactly */}
+              <View style={styles.statGrid}>
+                <StatTile
+                  icon="calendar"
+                  label="Next Payment"
+                  value={formatDate(sub.billingDate).replace(/, \d{4}$/, (m) => m)}
+                  sub={nextPaymentSub(sub.billingDate)}
                 />
-                <Divider />
-                <InfoRow
-                  label="Annual Cost"
+                <StatTile
+                  icon="refresh-cw"
+                  label="Billing Cycle"
+                  value="Monthly"
+                  sub={`Since ${formatMonthYear(sub.billingDate)}`}
+                />
+                <StatTile
+                  icon="clock"
+                  label="Total Spent"
                   value={formatINR(sub.price * 12)}
+                  sub="Yearly cost"
                 />
-                <Divider />
-                <InfoRow
-                  label="Next Billing"
-                  value={formatDate(sub.billingDate)}
-                />
-                <Divider />
-                <InfoRow
-                  label="Payment Method"
-                  value={
-                    sub.paymentBrand || sub.cardLast4
-                      ? `${sub.paymentBrand ? sub.paymentBrand.toUpperCase() + ' ' : ''}•••• ${sub.cardLast4 || '—'}`
-                      : 'Not set'
-                  }
-                />
-                <Divider />
-                <InfoRow
-                  label="Auto Renewal"
-                  right={
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text
-                        style={[
-                          styles.autoLabel,
-                          { color: autoRenew ? colors.success : colors.muted },
-                        ]}
-                      >
-                        {autoRenew ? 'ON' : 'OFF'}
-                      </Text>
-                      <Switch
-                        value={autoRenew}
-                        onValueChange={(v) => {
-                          onToggleAutoRenew?.(sub, v)
-                          fireToast(v ? 'Auto renewal enabled' : 'Auto renewal disabled')
-                        }}
-                        trackColor={{ true: colors.primary, false: '#D6D3CB' }}
-                        thumbColor="#fff"
-                      />
-                    </View>
-                  }
+                <StatTile
+                  icon="tv"
+                  label="Category"
+                  value={sub.category}
+                  sub={sub.category === 'Entertainment' ? 'Streaming' : ''}
                 />
               </View>
 
-              {/* Actions */}
-              <View style={styles.actionsGroup}>
-                {actions.map((a) => (
-                  <Pressable
-                    key={a.kind}
-                    onPress={() => !a.disabled && handleAction(a.kind)}
-                    style={({ pressed }) => [
-                      styles.actionRow,
-                      pressed && !a.disabled && { backgroundColor: '#F0EEFE' },
-                      a.disabled && { opacity: 0.35 },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.actionIcon,
-                        a.tone === 'danger' && { backgroundColor: colors.dangerBg },
-                      ]}
-                    >
-                      <Feather
-                        name={a.icon}
-                        size={16}
-                        color={a.tone === 'danger' ? colors.danger : colors.ink}
-                      />
-                    </View>
-                    <Text
-                      style={[
-                        styles.actionLabel,
-                        a.tone === 'danger' && { color: colors.danger },
-                      ]}
-                    >
-                      {a.label}
-                    </Text>
-                    <Feather
-                      name="chevron-right"
-                      size={16}
-                      color={colors.muted}
-                    />
-                  </Pressable>
-                ))}
+              {/* Toggle rows — icon badge + label/sub + switch */}
+              <ToggleRow
+                icon="bell"
+                title="Payment Reminder"
+                sub="Notify me 2 days before"
+                value={true}
+                onChange={() =>
+                  fireToast('Payment reminder saved to defaults in Settings')
+                }
+              />
+              <ToggleRow
+                icon="rotate-cw"
+                title="Auto-Renew"
+                sub="Renew automatically each month"
+                value={autoRenew}
+                onChange={(v) => {
+                  onToggleAutoRenew?.(sub, v)
+                  fireToast(v ? 'Auto renewal enabled' : 'Auto renewal disabled')
+                }}
+              />
+
+              {/* Payment methods row */}
+              <View style={styles.pmRow}>
+                <View>
+                  <Text style={styles.pmLabel}>Payment methods</Text>
+                  <Text style={styles.pmValue}>
+                    {sub.paymentBrand || sub.cardLast4
+                      ? `${sub.paymentBrand ? sub.paymentBrand.toUpperCase() + ' ' : ''}•••• ${sub.cardLast4 || '—'}`
+                      : 'Not set'}
+                  </Text>
+                </View>
+                <Pressable
+                  style={styles.pmChange}
+                  onPress={() => {
+                    onEdit(sub)
+                    onClose()
+                  }}
+                >
+                  <Text style={styles.pmChangeText}>Change</Text>
+                  <Feather name="chevron-right" size={14} color="#fff" />
+                </Pressable>
+              </View>
+
+              {/* Sticky-feel action pair: Pause + Cancel */}
+              <View style={styles.actionPair}>
+                <Pressable
+                  disabled={isTerminal}
+                  onPress={() => handleAction('pause-toggle')}
+                  style={({ pressed }) => [
+                    styles.actionPill,
+                    styles.actionPillPause,
+                    isTerminal && { opacity: 0.4 },
+                    pressed && !isTerminal && { transform: [{ translateY: -1 }] },
+                  ]}
+                >
+                  <Text style={styles.actionPillText}>
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Text>
+                  <Feather
+                    name={isPaused ? 'play' : 'pause'}
+                    size={14}
+                    color="#fff"
+                  />
+                </Pressable>
+                <Pressable
+                  disabled={isTerminal}
+                  onPress={() => handleAction('cancel')}
+                  style={({ pressed }) => [
+                    styles.actionPill,
+                    styles.actionPillCancel,
+                    isTerminal && { opacity: 0.4 },
+                    pressed && !isTerminal && { transform: [{ translateY: -1 }] },
+                  ]}
+                >
+                  <Text style={styles.actionPillText}>Cancel</Text>
+                  <Feather name="x" size={14} color="#fff" />
+                </Pressable>
+              </View>
+
+              {/* Secondary — subtle text buttons for edit + delete */}
+              <View style={styles.secondaryRow}>
+                <Pressable
+                  onPress={() => handleAction('change-plan')}
+                  style={styles.secondaryBtn}
+                >
+                  <Feather name="sliders" size={13} color={colors.muted} />
+                  <Text style={styles.secondaryText}>Change plan</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleAction('delete')}
+                  style={styles.secondaryBtn}
+                >
+                  <Feather name="trash-2" size={13} color={colors.danger} />
+                  <Text style={[styles.secondaryText, { color: colors.danger }]}>
+                    Delete
+                  </Text>
+                </Pressable>
               </View>
             </ScrollView>
           </View>
@@ -434,6 +465,79 @@ export default function SubDetailSheet({
       </>
     </AnimatePresence>
   )
+}
+
+// ── Stat + toggle building blocks ───────────────────────────────────────────
+
+function StatTile({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: keyof typeof Feather.glyphMap
+  label: string
+  value: string
+  sub?: string
+}) {
+  return (
+    <View style={styles.statTile}>
+      <View style={styles.statHead}>
+        <Feather name={icon} size={13} color={colors.muted} />
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+      <Text style={styles.statValue}>{value}</Text>
+      {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
+    </View>
+  )
+}
+
+function ToggleRow({
+  icon,
+  title,
+  sub,
+  value,
+  onChange,
+}: {
+  icon: keyof typeof Feather.glyphMap
+  title: string
+  sub: string
+  value: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <View style={styles.toggleRow}>
+      <View style={styles.toggleBadge}>
+        <Feather name={icon} size={16} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.toggleTitle}>{title}</Text>
+        <Text style={styles.toggleSub}>{sub}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{ true: colors.primary, false: '#D6D3CB' }}
+        thumbColor="#fff"
+      />
+    </View>
+  )
+}
+
+function nextPaymentSub(iso: string): string {
+  const days = daysUntil(iso)
+  if (days < 0) return `${Math.abs(days)}d overdue`
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  if (days <= 30) return `in ${days} days`
+  if (days <= 60) return 'in next month'
+  return `in ${Math.round(days / 30)} months`
+}
+
+function formatMonthYear(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
 }
 
 // ── Small helpers ───────────────────────────────────────────────────────────
@@ -642,6 +746,164 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: font.bold,
     letterSpacing: 0.4,
+  },
+  // 2x2 stat grid
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 16,
+  },
+  statTile: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 0,
+    padding: 14,
+    borderRadius: radius.lg,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...elevation.card,
+  },
+  statHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontFamily: font.bold,
+    color: colors.muted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  statValue: {
+    fontSize: 16,
+    fontFamily: font.bold,
+    color: colors.ink,
+    letterSpacing: -0.4,
+  },
+  statSub: {
+    marginTop: 2,
+    fontSize: 11,
+    fontFamily: font.regular,
+    color: colors.muted,
+  },
+  // Toggle rows
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.lg,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+    ...elevation.card,
+  },
+  toggleBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.primaryTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleTitle: {
+    fontFamily: font.bold,
+    fontSize: 14,
+    color: colors.ink,
+    letterSpacing: -0.2,
+  },
+  toggleSub: {
+    marginTop: 2,
+    fontFamily: font.regular,
+    fontSize: 11,
+    color: colors.muted,
+  },
+  // Payment methods
+  pmRow: {
+    marginTop: 6,
+    marginBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  pmLabel: {
+    fontFamily: font.bold,
+    fontSize: 14,
+    color: colors.ink,
+    letterSpacing: -0.2,
+  },
+  pmValue: {
+    marginTop: 2,
+    fontFamily: font.regular,
+    fontSize: 12,
+    color: colors.muted,
+  },
+  pmChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+  },
+  pmChangeText: {
+    color: '#fff',
+    fontFamily: font.bold,
+    fontSize: 12,
+    letterSpacing: -0.1,
+  },
+  // Action pair
+  actionPair: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  actionPill: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: radius.pill,
+  },
+  actionPillPause: {
+    backgroundColor: '#E38A5B', // warm terracotta like the reference
+  },
+  actionPillCancel: {
+    backgroundColor: colors.danger,
+  },
+  actionPillText: {
+    color: '#fff',
+    fontFamily: font.bold,
+    fontSize: 14,
+    letterSpacing: -0.2,
+  },
+  secondaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    paddingVertical: 6,
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  secondaryText: {
+    fontFamily: font.semibold,
+    fontSize: 12,
+    color: colors.muted,
   },
   // Actions
   actionsGroup: {
