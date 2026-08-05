@@ -6,7 +6,7 @@ import { colors, elevation } from '../theme'
 
 // 4 tabs (2 left + FAB slot + 2 right) — symmetric around the centered FAB
 // so the plus button never overlaps a label.
-export type NavTab = 'home' | 'subs' | 'analytics' | 'profile'
+export type NavTab = 'home' | 'calendar' | 'analytics' | 'profile'
 
 type Props = {
   active: NavTab
@@ -19,10 +19,10 @@ const TABS: {
   label: string
   icon: keyof typeof Feather.glyphMap
 }[] = [
-  { key: 'home',      label: 'Home',  icon: 'home' },
-  { key: 'subs',      label: 'Subs',  icon: 'list' },
-  { key: 'analytics', label: 'Stats', icon: 'bar-chart-2' },
-  { key: 'profile',   label: 'You',   icon: 'user' },
+  { key: 'home',      label: 'Home',     icon: 'home' },
+  { key: 'calendar',  label: 'Calendar', icon: 'calendar' },
+  { key: 'analytics', label: 'Stats',    icon: 'bar-chart-2' },
+  { key: 'profile',   label: 'You',      icon: 'user' },
 ]
 
 export default function BottomNav({ active, onSelect, onAdd }: Props) {

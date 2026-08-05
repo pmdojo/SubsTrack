@@ -20,6 +20,7 @@ import AddSubModal from '../components/AddSubModal'
 import AddSubWizard from '../components/wizard/AddSubWizard'
 import BottomNav, { NavTab } from '../components/BottomNav'
 import SettingsScreen from './SettingsScreen'
+import CalendarScreen from './CalendarScreen'
 import SubDetailSheet from '../components/SubDetailSheet'
 import {
   useSubs,
@@ -138,63 +139,73 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Header is always visible so the shell stays consistent across tabs */}
         <Section delay={0}>
           <Header subs={subs} />
         </Section>
 
-        <Section delay={80}>
-          <View
-            style={[styles.heroRow, !useOverlap && styles.heroRowStacked]}
-          >
-            <View style={styles.heroSlot}>
-              <DuePaymentCard subs={subs} />
-            </View>
-            <View style={styles.heroSlot}>
-              <ActiveSubsHeroCard
+        {tab === 'home' ? (
+          <>
+            <Section delay={80}>
+              <View
+                style={[styles.heroRow, !useOverlap && styles.heroRowStacked]}
+              >
+                <View style={styles.heroSlot}>
+                  <DuePaymentCard subs={subs} />
+                </View>
+                <View style={styles.heroSlot}>
+                  <ActiveSubsHeroCard
+                    subs={subs}
+                    onOpen={() => setTab('calendar')}
+                  />
+                </View>
+              </View>
+            </Section>
+
+            <Section delay={160}>
+              <MetricsBar subs={subs} />
+            </Section>
+
+            <Section delay={200}>
+              <QuickActions onAdd={() => setWizardOpen(true)} />
+            </Section>
+
+            <Section delay={240}>
+              <SpendingOverview subs={subs} />
+            </Section>
+
+            <Section delay={280}>
+              <SubList
                 subs={subs}
-                onOpen={() => setTab('subs')}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onSelect={(s) => setDetailSubId(s.id)}
               />
-            </View>
-          </View>
-        </Section>
+            </Section>
+          </>
+        ) : null}
 
-        <Section delay={160}>
-          <MetricsBar subs={subs} />
-        </Section>
+        {tab === 'calendar' ? (
+          <Section delay={40}>
+            <CalendarScreen />
+          </Section>
+        ) : null}
 
-        <Section delay={200}>
-          <QuickActions onAdd={() => setWizardOpen(true)} />
-        </Section>
-
-        <Section delay={240}>
-          <SpendingOverview subs={subs} />
-        </Section>
-
-        <Section delay={280}>
-          <SubList
-            subs={subs}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            onSelect={(s) => setDetailSubId(s.id)}
-          />
-        </Section>
-
-        {tab === 'profile' && (
-          <Section delay={0}>
+        {tab === 'profile' ? (
+          <Section delay={40}>
             <SettingsScreen />
           </Section>
-        )}
+        ) : null}
 
-        {(tab === 'subs' || tab === 'analytics') && (
+        {tab === 'analytics' ? (
           <View style={styles.tabPlaceholder}>
-            <Text style={styles.tabPlaceholderText}>
-              {tab === 'subs' ? 'All Subscriptions' : 'Analytics'}
-            </Text>
+            <Text style={styles.tabPlaceholderText}>Insights</Text>
             <Text style={styles.tabPlaceholderSub}>
-              Coming soon. Home is the fully-built screen for this pass.
+              Coming in Phase 6.1 — spend by category, monthly trend, and
+              savings.
             </Text>
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       <BottomNav
