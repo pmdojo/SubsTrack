@@ -19,6 +19,7 @@ import SubList from '../components/SubList'
 import AddSubModal from '../components/AddSubModal'
 import AddSubWizard from '../components/wizard/AddSubWizard'
 import BottomNav, { NavTab } from '../components/BottomNav'
+import SettingsScreen from './SettingsScreen'
 import SubDetailSheet from '../components/SubDetailSheet'
 import {
   useSubs,
@@ -178,14 +179,16 @@ export default function HomeScreen() {
           />
         </Section>
 
-        {tab !== 'home' && (
+        {tab === 'profile' && (
+          <Section delay={0}>
+            <SettingsScreen />
+          </Section>
+        )}
+
+        {(tab === 'subs' || tab === 'analytics') && (
           <View style={styles.tabPlaceholder}>
             <Text style={styles.tabPlaceholderText}>
-              {tab === 'subs'
-                ? 'All Subscriptions'
-                : tab === 'analytics'
-                  ? 'Analytics'
-                  : 'Profile'}
+              {tab === 'subs' ? 'All Subscriptions' : 'Analytics'}
             </Text>
             <Text style={styles.tabPlaceholderSub}>
               Coming soon. Home is the fully-built screen for this pass.

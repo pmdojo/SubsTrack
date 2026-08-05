@@ -48,8 +48,7 @@ export default function Header({ subs }: Props) {
           </LinearGradient>
         </MotiView>
         <View>
-          <Text style={styles.hi}>{greeting},</Text>
-          <Text style={styles.name}>Rajashri 👋</Text>
+          <Text style={styles.name}>{greeting} 👋</Text>
           <Text style={styles.sub}>Let's manage your subscriptions.</Text>
         </View>
       </View>
