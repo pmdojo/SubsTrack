@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { MotiView, AnimatePresence } from '../lib/motion'
 import { colors, elevation, font, radius } from '../theme'
 import type { Subscription, SubStatus } from '../lib/types'
@@ -41,6 +42,37 @@ function formatDate(iso: string): string {
     month: 'long',
     year: 'numeric',
   })
+}
+
+/** Days from today to an ISO date. Negative = in the past. */
+function daysUntil(iso: string): number {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  d.setHours(0, 0, 0, 0)
+  return Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+/** Human label for a days-away integer. */
+function renewalChipLabel(days: number, isPaused: boolean, isTerminal: boolean): string {
+  if (isTerminal) return 'Not renewing'
+  if (isPaused) return 'Paused'
+  if (days < 0) return `${Math.abs(days)}d overdue`
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Tomorrow'
+  if (days <= 7) return `In ${days} days`
+  return `In ${days} days`
+}
+
+/** '#RRGGBB' → 'rgba(r,g,b,a)'. Falls back to primary tint if malformed. */
+function hexToRgba(hex: string, alpha: number): string {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!m) return `rgba(76,76,229,${alpha})`
+  const r = parseInt(m[1], 16)
+  const g = parseInt(m[2], 16)
+  const b = parseInt(m[3], 16)
+  return `rgba(${r},${g},${b},${alpha})`
 }
 
 const STATUS_META: Record<
@@ -200,23 +232,46 @@ export default function SubDetailSheet({
           <View style={styles.sheet}>
             <View style={styles.grabber} />
 
-            {/* Header — icon + name + close */}
-            <View style={styles.headRow}>
-              <View style={[styles.icon, { backgroundColor: sub.color }]}>
-                <Text style={styles.iconText}>{sub.icon}</Text>
+            {/* Gradient hero — tinted with the subscription's brand color.
+                Reads as a "banner" that unifies icon + name + renewal chip. */}
+            <LinearGradient
+              colors={[hexToRgba(sub.color, 0.22), hexToRgba(sub.color, 0.04)] as any}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.hero}
+            >
+              <View style={styles.heroTop}>
+                <View style={[styles.icon, { backgroundColor: sub.color }]}>
+                  <Text style={styles.iconText}>{sub.icon}</Text>
+                </View>
+                <Pressable
+                  onPress={onClose}
+                  style={styles.closeBtn}
+                  hitSlop={12}
+                >
+                  <Feather name="x" size={18} color={colors.ink} />
+                </Pressable>
               </View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
-                <Text style={styles.name}>{sub.name}</Text>
-                <Text style={styles.category}>{sub.category}</Text>
+              <Text style={styles.name}>{sub.name}</Text>
+              <Text style={styles.category}>{sub.category}</Text>
+
+              <View style={styles.heroChipsRow}>
+                <View
+                  style={[styles.statusPill, { backgroundColor: status.bg }]}
+                >
+                  <Text style={styles.statusDot}>{status.dot}</Text>
+                  <Text style={[styles.statusText, { color: status.fg }]}>
+                    {status.label}
+                  </Text>
+                </View>
+                <View style={styles.renewalChip}>
+                  <Feather name="calendar" size={11} color={colors.ink} />
+                  <Text style={styles.renewalChipText}>
+                    {renewalChipLabel(daysUntil(sub.billingDate), isPaused, isTerminal)}
+                  </Text>
+                </View>
               </View>
-              <Pressable
-                onPress={onClose}
-                style={styles.closeBtn}
-                hitSlop={12}
-              >
-                <Feather name="x" size={18} color={colors.ink} />
-              </Pressable>
-            </View>
+            </LinearGradient>
 
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -225,20 +280,6 @@ export default function SubDetailSheet({
             >
               {/* Info list — key/value rows */}
               <View style={styles.infoCard}>
-                <InfoRow
-                  label="Status"
-                  right={
-                    <View
-                      style={[styles.statusPill, { backgroundColor: status.bg }]}
-                    >
-                      <Text style={styles.statusDot}>{status.dot}</Text>
-                      <Text style={[styles.statusText, { color: status.fg }]}>
-                        {status.label}
-                      </Text>
-                    </View>
-                  }
-                />
-                <Divider />
                 <InfoRow label="Plan" value={sub.plan ?? 'Standard'} />
                 <Divider />
                 <InfoRow
@@ -248,13 +289,22 @@ export default function SubDetailSheet({
                 />
                 <Divider />
                 <InfoRow
+                  label="Annual Cost"
+                  value={formatINR(sub.price * 12)}
+                />
+                <Divider />
+                <InfoRow
                   label="Next Billing"
                   value={formatDate(sub.billingDate)}
                 />
                 <Divider />
                 <InfoRow
                   label="Payment Method"
-                  value={`•••• ${sub.cardLast4}`}
+                  value={
+                    sub.paymentBrand || sub.cardLast4
+                      ? `${sub.paymentBrand ? sub.paymentBrand.toUpperCase() + ' ' : ''}•••• ${sub.cardLast4 || '—'}`
+                      : 'Not set'
+                  }
                 />
                 <Divider />
                 <InfoRow
@@ -462,6 +512,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 18,
+  },
+  hero: {
+    borderRadius: radius.xl,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#EEEBE4',
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  heroChipsRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  renewalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  renewalChipText: {
+    fontSize: 12,
+    fontFamily: font.bold,
+    color: colors.ink,
+    letterSpacing: -0.1,
   },
   icon: {
     width: 56,

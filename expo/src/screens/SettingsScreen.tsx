@@ -3,6 +3,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native'
@@ -32,6 +33,7 @@ export default function SettingsScreen() {
       </Text>
 
       <PaymentMethodsSection />
+      <NotificationsSection />
       <RemindersSection />
       <AboutSection />
     </View>
@@ -108,6 +110,89 @@ function CardRow({
         <Feather name="trash-2" size={16} color={colors.danger} />
       </Pressable>
     </View>
+  )
+}
+
+// ── Notifications ────────────────────────────────────────────────────────
+
+// Presets are stored as `start-end` HH:MM strings; null pair = quiet hours off.
+type QuietPreset = { key: string; label: string; start: string | null; end: string | null }
+const QUIET_PRESETS: QuietPreset[] = [
+  { key: 'off',    label: 'Off',           start: null,    end: null    },
+  { key: 'night',  label: '22:00 → 08:00', start: '22:00', end: '08:00' },
+  { key: 'strict', label: '21:00 → 09:00', start: '21:00', end: '09:00' },
+]
+
+function NotificationsSection() {
+  const enabled = usePrefs((s) => s.remindersEnabled)
+  const qhStart = usePrefs((s) => s.quietHoursStart)
+  const qhEnd   = usePrefs((s) => s.quietHoursEnd)
+  const setPref = usePrefs((s) => s.set)
+  const toast = useToast()
+
+  const activeKey = QUIET_PRESETS.find(
+    (p) => p.start === qhStart && p.end === qhEnd
+  )?.key ?? 'off'
+
+  const toggle = (v: boolean) => {
+    setPref('remindersEnabled', v)
+    toast(v ? 'Reminders on' : 'Reminders paused', { kind: 'success' })
+  }
+
+  const chooseQuiet = (p: QuietPreset) => {
+    setPref('quietHoursStart', p.start)
+    setPref('quietHoursEnd', p.end)
+    toast(
+      p.key === 'off'
+        ? 'Quiet hours off'
+        : `Quiet hours ${p.label}`,
+      { kind: 'success' }
+    )
+  }
+
+  return (
+    <SectionCard
+      title="Notifications"
+      subtitle="Master switch, plus a nightly window where we stay silent."
+    >
+      <View style={styles.row}>
+        <Text style={styles.rowLabel}>Reminders</Text>
+        <Switch
+          value={enabled}
+          onValueChange={toggle}
+          trackColor={{ true: colors.primary, false: '#D6D3CB' }}
+          thumbColor="#fff"
+        />
+      </View>
+
+      <View
+        style={[
+          styles.quietBlock,
+          !enabled && { opacity: 0.4 },
+        ]}
+        pointerEvents={enabled ? 'auto' : 'none'}
+      >
+        <Text style={styles.quietLabel}>Quiet hours</Text>
+        <View style={styles.chipRow}>
+          {QUIET_PRESETS.map((p) => {
+            const active = activeKey === p.key
+            return (
+              <Pressable
+                key={p.key}
+                onPress={() => chooseQuiet(p)}
+                style={[styles.chip, active && styles.chipActive]}
+              >
+                <Text
+                  style={[styles.chipText, active && styles.chipTextActive]}
+                >
+                  {p.label}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+      </View>
+    </SectionCard>
   )
 }
 
@@ -336,5 +421,19 @@ const styles = StyleSheet.create({
     fontFamily: font.semibold,
     fontSize: 13,
     color: colors.ink,
+  },
+  quietBlock: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  quietLabel: {
+    fontFamily: font.medium,
+    fontSize: 12,
+    color: colors.muted,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
 })

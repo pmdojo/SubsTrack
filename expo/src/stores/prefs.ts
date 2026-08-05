@@ -11,6 +11,7 @@ export type PrefsState = {
   currency: string // ISO 4217, e.g. 'INR', 'USD'
   locale: string // BCP-47, e.g. 'en-IN'
   reminderLeadDaysDefault: number // 0–30
+  remindersEnabled: boolean // master notifications toggle
   quietHoursStart: string | null // 'HH:MM' or null
   quietHoursEnd: string | null // 'HH:MM' or null
   hasCompletedOnboarding: boolean
@@ -26,6 +27,7 @@ const defaults: PrefsState = {
   currency: 'INR',
   locale: 'en-IN',
   reminderLeadDaysDefault: 2,
+  remindersEnabled: true,
   quietHoursStart: null,
   quietHoursEnd: null,
   hasCompletedOnboarding: false,
